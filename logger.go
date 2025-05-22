@@ -5,6 +5,7 @@ import "fmt"
 type (
 	Logger interface {
 		Errorf(format string, args ...interface{})
+		Warnf(format string, args ...interface{})
 	}
 
 	defaultLogger struct{}
@@ -25,4 +26,8 @@ func getLogger() Logger {
 
 func (l *defaultLogger) Errorf(format string, args ...interface{}) {
 	fmt.Printf("[ERROR] "+format, args...)
+}
+
+func (l *defaultLogger) Warnf(format string, args ...interface{}) {
+	fmt.Printf("[WARN] "+format, args...)
 }

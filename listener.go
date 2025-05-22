@@ -1,6 +1,7 @@
 package apollox
 
 import (
+	errors2 "errors"
 	"github.com/apolloconfig/agollo/v4"
 	"github.com/pkg/errors"
 	"reflect"
@@ -44,6 +45,7 @@ var (
 	ErrSliceElemNotConvertible = errors.New("slice element type not convertible")
 	ErrWaitInitTimeout         = errors.New("wait init timeout")
 	ErrMustStructPtr           = errors.New("config target must be a pointer to struct and not nil")
+	ErrNamespaceNotFound       = errors.New("namespace not found")
 
 	configurationType = reflect.TypeFor[Configuration]()
 )
@@ -125,7 +127,11 @@ func (l *ConfigListener) Poll(client agollo.Client) {
 		routineGroup.Run(func() {
 			err := l.pollNamespace(client, namespace)
 			if err != nil {
-				getLogger().Errorf("apollo config polling error, namespace: %s, %v", namespace, err)
+				if errors2.Is(err, ErrNamespaceNotFound) {
+					getLogger().Warnf("apollo config polling error, namespace may never released before: %s, %v", namespace, err)
+				} else {
+					getLogger().Errorf("apollo config polling error, namespace: %s, %v", namespace, err)
+				}
 			}
 		})
 	}
@@ -134,6 +140,9 @@ func (l *ConfigListener) Poll(client agollo.Client) {
 
 func (l *ConfigListener) pollNamespace(client agollo.Client, namespace string) error {
 	config := client.GetConfig(namespace)
+	if config == nil {
+		return errors.Wrapf(ErrNamespaceNotFound, namespace)
+	}
 	if !config.GetIsInit() {
 		timeout := WaitWithTimeout(config.GetWaitInit(), l.waitTimeout)
 		if !timeout {
@@ -214,21 +223,21 @@ func (l *ConfigListener) generateReflectValuesCache(prefix string, rv *reflect.V
 
 func (l *ConfigListener) mappingFieldValue(key string, field *reflect.Value, value interface{}) error {
 	if !field.CanSet() {
-		return errors.WithMessagef(ErrCanNotSet, "key: %s", key)
+		return errors.Wrapf(ErrCanNotSet, "key: %s", key)
 	}
 
 	fieldType := field.Type()
 	rvValue := reflect.ValueOf(value)
 
 	if rvValue.Kind() != field.Kind() {
-		return errors.WithMessagef(ErrTypeNotMatch, "field type: %s，value type: %T", fieldType, value)
+		return errors.Wrapf(ErrTypeNotMatch, "field type: %s，value type: %T", fieldType, value)
 	}
 
 	if !rvValue.Type().ConvertibleTo(fieldType) {
 		if rvValue.Kind() == reflect.Slice {
 			return l.mappingSliceFieldValue(key, field, &rvValue)
 		} else {
-			return errors.WithMessagef(ErrTypeNotMatch, "field type: %s，value type: %T", fieldType, value)
+			return errors.Wrapf(ErrTypeNotMatch, "field type: %s，value type: %T", fieldType, value)
 		}
 	}
 
@@ -271,7 +280,7 @@ func (l *ConfigListener) mappingSliceFieldValue(key string, field, rvValue *refl
 				// agollo returns a map when the slice element is key-value mode
 				finalElem = *(l.convertMapToStruct(elemType, &elem))
 			} else if !elemActualType.ConvertibleTo(elemType) {
-				return errors.WithMessagef(ErrSliceElemNotConvertible, "key: %s, field: %s, expected: %v, got: %v",
+				return errors.Wrapf(ErrSliceElemNotConvertible, "key: %s, field: %s, expected: %v, got: %v",
 					key, elemType.Name(), elemType, elemActualType)
 			} else {
 				finalElem = elem.Convert(elemType)
