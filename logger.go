@@ -25,9 +25,13 @@ func getLogger() Logger {
 }
 
 func (l *defaultLogger) Errorf(format string, args ...interface{}) {
-	fmt.Printf("[ERROR] "+format, args...)
+	l.printf("[ERROR]", format, args...)
 }
 
 func (l *defaultLogger) Warnf(format string, args ...interface{}) {
-	fmt.Printf("[WARN] "+format, args...)
+	l.printf("[WARN]", format, args...)
+}
+
+func (l *defaultLogger) printf(level, format string, args ...interface{}) {
+	fmt.Printf(level+" "+format+"\n", args...)
 }
