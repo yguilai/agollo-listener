@@ -1,4 +1,4 @@
-package apollox
+package agollolistener
 
 import (
 	"github.com/apolloconfig/agollo/v4/storage"
