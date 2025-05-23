@@ -233,23 +233,30 @@ func (l *ConfigListener) mappingFieldValue(key string, field *reflect.Value, val
 	fieldType := field.Type()
 	rvValue := reflect.ValueOf(value)
 
-	if rvValue.Kind() != field.Kind() {
-		return errors.Wrapf(ErrTypeNotMatch, "field type: %s，value type: %T", fieldType, value)
-	}
-
 	if !rvValue.Type().ConvertibleTo(fieldType) {
-		if rvValue.Kind() == reflect.Slice {
+		switch rvValue.Kind() {
+		case reflect.Slice:
 			return l.mappingSliceFieldValue(key, field, &rvValue)
-		} else {
+		case reflect.String:
+			return l.mappingStringToOther(key, field, &rvValue)
+		default:
 			return errors.Wrapf(ErrTypeNotMatch, "field type: %s，value type: %T", fieldType, value)
 		}
 	}
 
 	convertedValue := rvValue.Convert(fieldType)
 	if l.replaceEnv && convertedValue.Kind() == reflect.String {
-		convertedValue.SetString(replaceEnvVar(convertedValue.String()))
+		convertedValue = reflect.ValueOf(replaceEnvVar(convertedValue.String()))
 	}
 	field.Set(convertedValue)
+	return nil
+}
+
+func (l *ConfigListener) mappingStringToOther(key string, field *reflect.Value, stringValue *reflect.Value) error {
+	err := l.convertStringValue(field, stringValue.String())
+	if err != nil {
+		return errors.Wrapf(err, "convert string key: %s to other type error", key)
+	}
 	return nil
 }
 
