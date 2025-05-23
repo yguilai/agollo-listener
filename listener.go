@@ -157,7 +157,7 @@ func (l *ConfigListener) pollNamespace(client agollo.Client, namespace string) e
 			err := l.mappingFieldValue(keyString, rv, value)
 			if err != nil {
 				getLogger().Errorf("apollo range config error: %v", err)
-				return false
+				return true
 			}
 		}
 		return true
