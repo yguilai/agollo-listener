@@ -7,6 +7,8 @@ import (
 	"unicode"
 )
 
+var envReg = regexp.MustCompile(`\$\{[\w\-]+}`)
+
 func lowerFirst(s string) string {
 	for i, v := range s {
 		return string(unicode.ToLower(v)) + s[i+1:]
@@ -28,8 +30,7 @@ func replaceEnvVar(s string) string {
 }
 
 func findVariables(input string) []string {
-	re := regexp.MustCompile(`\$\{[\w\-]+}`)
-	matches := re.FindAllStringSubmatch(input, -1)
+	matches := envReg.FindAllStringSubmatch(input, -1)
 
 	contains := make(map[string]bool)
 	var variables []string
