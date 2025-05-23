@@ -75,6 +75,7 @@ func NewConfigListener(targetConfig Configuration, opts ...Option) (*ConfigListe
 		namespaces:  options.namespaces,
 		waitTimeout: options.waitTimeout,
 		cache:       make(map[string]*reflect.Value),
+		replaceEnv:  options.replaceEnv,
 	}
 	rv := reflect.ValueOf(targetConfig).Elem()
 	err := l.generateReflectValuesCache(targetConfig.Prefix(), &rv)
@@ -204,7 +205,10 @@ func (l *ConfigListener) generateReflectValuesCache(prefix string, rv *reflect.V
 			fieldRV = fieldRV.Elem()
 		}
 
-		realKey := prefix + keySep + key
+		realKey := key
+		if len(prefix) != 0 {
+			realKey = prefix + keySep + key
+		}
 		l.cache[realKey] = &fieldRV
 		lowerKey := strings.ToLower(realKey)
 		if lowerKey != realKey {
