@@ -125,8 +125,9 @@ func (l *ConfigListener) OnNewestChange(event *storage.FullChangeEvent) {
 func (l *ConfigListener) Poll(client agollo.Client) {
 	routineGroup := NewRoutineGroup()
 	for _, namespace := range l.namespaces {
+		copyNamespace := namespace
 		routineGroup.Run(func() {
-			err := l.pollNamespace(client, namespace)
+			err := l.pollNamespace(client, copyNamespace)
 			if err != nil {
 				if errors2.Is(err, ErrNamespaceNotFound) {
 					getLogger().Warnf("apollo config polling error, namespace may never released before: %s, %v", namespace, err)
